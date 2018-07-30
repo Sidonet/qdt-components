@@ -86,9 +86,8 @@ const QdtComponents = class {
             qAppp.field(locField).selectValues(res, false, true);
           }
         }
-      } else {
-        qAppp.clearAll();
       }
+      console.log(`setSelections ${JSON.stringify(valuesFromLocalStorage)} and appId - ${qAppp.id}`);
     } catch (error) {
       console.log(error);
     }
