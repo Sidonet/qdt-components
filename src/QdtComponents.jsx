@@ -19,79 +19,85 @@ const components = {
   QdtFilter, QdtTable, QdtViz, QdtSelectionToolbar, QdtKpi, QdtButton, QdtPicasso, QdtSearch, QdtCurrentSelections,
 };
 
+function isNumber(n) {
+  return !Number.isNaN(parseFloat(n)) && Number.isFinite(parseFloat(n));
+}
+
 const QdtComponents = class {
-  static picasso = {
-    settings,
-  };
+    static picasso = {
+      settings,
+    };
 
-  constructor(config = {}, connections = { vizApi: true, engineApi: true }) {
-    const myConfig = config;
-    myConfig.identity = utility.uid(16);
-    this.qAppPromise = (connections.vizApi) ? qApp(myConfig) : null;
-    this.qDocPromise = (connections.engineApi) ? qDoc(myConfig) : null;
-  }
-
-  render = async (type, props, element) => new Promise((resolve, reject) => {
-    try {
-      const { qAppPromise, qDocPromise } = this;
-      const Component = components[type];
-      ReactDOM.render(
-        <Component
-          {...props}
-          qAppPromise={qAppPromise}
-          qDocPromise={qDocPromise}
-          ref={node => resolve(node)}
-        />,
-        element,
-      );
-    } catch (error) {
-      reject(error);
+    constructor(config = {}, connections = { vizApi: true, engineApi: true }) {
+      const myConfig = config;
+      myConfig.identity = utility.uid(16);
+      this.qAppPromise = (connections.vizApi) ? qApp(myConfig) : null;
+      this.qDocPromise = (connections.engineApi) ? qDoc(myConfig) : null;
     }
-  });
 
-  async setSelections(selections) {
-    try {
-      const { qAppPromise } = this;
-      const qAppp = await qAppPromise;
-
-      const valuesFromLocalStorage = JSON.parse(selections);
-
-      console.log(`setSelections${JSON.stringify(valuesFromLocalStorage)}`);
-
-      if (valuesFromLocalStorage !== null && valuesFromLocalStorage.length > 0) {
-        for (let i = 0; i < valuesFromLocalStorage.length; i++) {
-          const locField = valuesFromLocalStorage[i].field;
-          const locSelected = valuesFromLocalStorage[i].selected;
-          let selectedArrayNotTrimmed = [];
-
-          selectedArrayNotTrimmed = locSelected.split(',');
-          const selectedArrayTrimmed = [];
-
-          for (let j = 0; j < selectedArrayNotTrimmed.length; j++) {
-            selectedArrayTrimmed[j] = selectedArrayNotTrimmed[j].trim();
-          }
-          if (selectedArrayTrimmed[0] == null) {
-            let res = [];
-            res = locSelected.split(',').map(item => parseInt(item, 10));
-
-            qAppp.field(locField).selectValues(res, false, true);
-          } else if (selectedArrayTrimmed[0] === 'ALL') {
-            qAppp.field(locField).selectAll();
-          } else {
-            const res = [];
-
-            for (let k = 0; k < selectedArrayTrimmed.length; k++) {
-              res.push({ qText: selectedArrayTrimmed[k] });
-            }
-            qAppp.field(locField).selectValues(res, false, true);
-          }
-        }
+    render = async (type, props, element) => new Promise((resolve, reject) => {
+      try {
+        const { qAppPromise, qDocPromise } = this;
+        const Component = components[type];
+        ReactDOM.render(
+          <Component
+            {...props}
+            qAppPromise={qAppPromise}
+            qDocPromise={qDocPromise}
+            ref={node => resolve(node)}
+          />,
+          element,
+        );
+      } catch (error) {
+        reject(error);
       }
-      console.log(`setSelections ${JSON.stringify(valuesFromLocalStorage)} and appId - ${qAppp.id}`);
-    } catch (error) {
-      console.log(error);
+    });
+
+    async setSelections(selections) {
+      try {
+        const { qAppPromise } = this;
+        const qAppp = await qAppPromise;
+
+        const valuesFromLocalStorage = JSON.parse(selections);
+
+        console.log(`setSelections${JSON.stringify(valuesFromLocalStorage)}`);
+
+        if (valuesFromLocalStorage !== null && valuesFromLocalStorage.length > 0) {
+          for (let i = 0; i < valuesFromLocalStorage.length; i++) {
+            const locField = valuesFromLocalStorage[i].field;
+            const locSelected = valuesFromLocalStorage[i].selected;
+            let selectedArrayNotTrimmed = [];
+
+            selectedArrayNotTrimmed = locSelected.split(',');
+            const selectedArrayTrimmed = [];
+
+            for (let j = 0; j < selectedArrayNotTrimmed.length; j++) {
+              selectedArrayTrimmed[j] = selectedArrayNotTrimmed[j].trim();
+            }
+            if (isNumber(selectedArrayTrimmed[0])) {
+              let res = [];
+              res = locSelected.split(',').map(item => parseInt(item, 10));
+
+              qAppp.field(locField).selectValues(res, false, true);
+            } else if (selectedArrayTrimmed[0] === 'ALL') {
+              qAppp.field(locField).selectAll();
+            } else {
+              const res = [];
+
+              for (let k = 0; k < selectedArrayTrimmed.length; k++) {
+                res.push({ qText: selectedArrayTrimmed[k] });
+              }
+              qAppp.field(locField).selectValues(res, false, true);
+            }
+          }
+        } else {
+          qAppp.clearAll();
+        }
+        console.log(`setSelections ${JSON.stringify(valuesFromLocalStorage)} and appId - ${qAppp.id}`);
+      } catch (error) {
+        console.log(error);
+      }
     }
-  }
 };
 
 export default QdtComponents;
