@@ -1,10 +1,11 @@
-/* eslint-disable no-plusplus */
 import React from 'react';
 import ReactDOM from 'react-dom';
 import qApp from './qApp';
 import qDoc from './qDoc';
 import utility from './utilities/';
 import settings from './picasso/settings';
+import picassoComponents from './picasso/settings/components';
+import picassoInteractions from './picasso/settings/interactions';
 import QdtFilter from './components/QdtFilter';
 import QdtTable from './components/QdtTable';
 import QdtViz from './components/QdtViz';
@@ -24,80 +25,78 @@ function isNumber(n) {
 }
 
 const QdtComponents = class {
-    static picasso = {
-      settings,
-    };
+  static picasso = {
+    settings,
+    components: picassoComponents,
+    interactions: picassoInteractions,
+  };
 
-    constructor(config = {}, connections = { vizApi: true, engineApi: true }) {
-      const myConfig = config;
-      myConfig.identity = utility.uid(16);
-      this.qAppPromise = (connections.vizApi) ? qApp(myConfig) : null;
-      this.qDocPromise = (connections.engineApi) ? qDoc(myConfig) : null;
+  static unmountQdtComponent = element => ReactDOM.unmountComponentAtNode(element)
+
+  constructor(config = {}, connections = { vizApi: true, engineApi: true, useUniqueSessionID: null }) {
+    const myConfig = config;
+    myConfig.identity = connections.useUniqueSessionID ? connections.useUniqueSessionID : utility.Uid(16);
+    this.qAppPromise = (connections.vizApi) ? qApp(myConfig) : null;
+    this.qDocPromise = (connections.engineApi) ? qDoc(myConfig) : null;
+  }
+
+  render = async (type, props, element) => new Promise((resolve, reject) => {
+    try {
+      const { qAppPromise, qDocPromise } = this;
+      const Component = components[type];
+      ReactDOM.render(
+        <Component
+          {...props}
+          qAppPromise={qAppPromise}
+          qDocPromise={qDocPromise}
+          ref={node => resolve(node)}
+        />,
+        element,
+      );
+    //   console.info(version);
+    } catch (error) {
+      reject(error);
     }
+  });
 
-    render = async (type, props, element) => new Promise((resolve, reject) => {
-      try {
-        const { qAppPromise, qDocPromise } = this;
-        const Component = components[type];
-        ReactDOM.render(
-          <Component
-            {...props}
-            qAppPromise={qAppPromise}
-            qDocPromise={qDocPromise}
-            ref={node => resolve(node)}
-          />,
-          element,
-        );
-      } catch (error) {
-        reject(error);
-      }
-    });
+  setSelections = async selection => new Promise(async (resolve, reject) => {
+    try {
+      const { qAppPromise } = this;
+      const qAppp = await qAppPromise;
 
-    async setSelections(selections) {
-      try {
-        const { qAppPromise } = this;
-        const qAppp = await qAppPromise;
+      const valuesFromLocalStorage = JSON.parse(selection);
+      console.log('setSelections valuesFromLocalStorage =', valuesFromLocalStorage);
 
-        const valuesFromLocalStorage = JSON.parse(selections);
+      if (valuesFromLocalStorage !== null) {
+        const locField = valuesFromLocalStorage.field;
+        const locSelected = JSON.parse(valuesFromLocalStorage.selected);
 
-        console.log(`setSelections${JSON.stringify(valuesFromLocalStorage)}`);
-
-        if (valuesFromLocalStorage !== null && valuesFromLocalStorage.length > 0) {
-          for (let i = 0; i < valuesFromLocalStorage.length; i++) {
-            const locField = valuesFromLocalStorage[i].field;
-            const locSelected = valuesFromLocalStorage[i].selected;
-            let selectedArrayNotTrimmed = [];
-
-            selectedArrayNotTrimmed = locSelected.split(',');
-            const selectedArrayTrimmed = [];
-
-            for (let j = 0; j < selectedArrayNotTrimmed.length; j++) {
-              selectedArrayTrimmed[j] = selectedArrayNotTrimmed[j].trim();
-            }
-            if (isNumber(selectedArrayTrimmed[0])) {
-              let res = [];
-              res = locSelected.split(',').map(item => parseInt(item, 10));
-
-              qAppp.field(locField).selectValues(res, false, true);
-            } else if (selectedArrayTrimmed[0] === 'ALL') {
-              qAppp.field(locField).selectAll();
-            } else {
-              const res = [];
-
-              for (let k = 0; k < selectedArrayTrimmed.length; k++) {
-                res.push({ qText: selectedArrayTrimmed[k] });
-              }
-              qAppp.field(locField).selectValues(res, false, true);
-            }
-          }
+        if (locSelected === null) {
+          console.log('setSelections field =', locField, 'res array = null');
+          qAppp.field(locField).clear();
+        } else if (locSelected[0] === 'ALL') {
+          console.log('setSelections field =', locField, 'res array = selectAll');
+          qAppp.field(locField).selectAll();
+        } else if (isNumber(locSelected[0])) {
+          let res = [];
+          res = locSelected.map(item => parseInt(item, 10));
+          console.log('setSelections field =', locField, 'res array Numeric =', JSON.stringify(res));
+          qAppp.field(locField).selectValues(res, false, true);
         } else {
-          qAppp.clearAll();
+          const res = [];
+          locSelected.forEach(value => res.push({ qText: value }));
+          console.log('setSelections field =', locField, 'res array =', JSON.stringify(res));
+          qAppp.field(locField).selectValues(res, false, true);
         }
-        console.log(`setSelections ${JSON.stringify(valuesFromLocalStorage)} and appId - ${qAppp.id}`);
-      } catch (error) {
-        console.log(error);
+      } else {
+        console.log('setSelections clearAll =', JSON.stringify(valuesFromLocalStorage));
+        qAppp.clearAll();
       }
+      resolve();
+    } catch (error) {
+      reject(error);
     }
+  })
 };
 
 export default QdtComponents;

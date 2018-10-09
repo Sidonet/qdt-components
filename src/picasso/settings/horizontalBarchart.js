@@ -1,137 +1,21 @@
-export default {
+import { axis, box, tooltip, range, labels } from './components';
+import { itooltip, pan } from './interactions';
+import theme from '../../styles';
+
+const setting = {
   scales: {
-    y: { data: { extract: { field: 'qDimensionInfo/0' } } },
     x: { data: { field: 'qMeasureInfo/0' }, include: [0] },
+    y: { data: { extract: { field: 'qDimensionInfo/0' }, padding: 0.2 } },
   },
   components: [
-    {
-      key: 'x-axis',
-      type: 'axis',
-      scale: 'x',
-      dock: 'bottom',
-    },
-    {
-      key: 'y-axis',
-      type: 'axis',
-      scale: 'y',
-      dock: 'left',
-    },
-    {
-      key: 'tooltip',
-      type: 'tooltip',
-      background: 'white',
-    },
-    {
-      type: 'box',
-      key: 'bars',
-      displayOrder: 1,
-      data: {
-        extract: {
-          field: 'qDimensionInfo/0',
-          props: {
-            start: 0,
-            end: { field: 'qMeasureInfo/0' },
-            qDimension: { field: 'qDimensionInfo/0' },
-            qMeasure: { field: 'qMeasureInfo/0' },
-          },
-        },
-      },
-      settings: {
-        major: { scale: 'y' },
-        minor: { scale: 'x' },
-        orientation: 'horizontal',
-      },
-      brush: {
-        trigger: [{
-          on: 'tap',
-          contexts: ['select'],
-        }],
-        consume: [{
-          context: 'select',
-          style: {
-            active: {
-              opacity: 1,
-            },
-            inactive: {
-              opacity: 0.5,
-            },
-          },
-        }],
-      },
-    },
-    {
-      key: 'rangeY',
-      type: 'brush-range',
-      settings: {
-        brush: 'select',
-        direction: 'vertical',
-        scale: 'y',
-        target: {
-          component: 'y-axis',
-        },
-        bubbles: {
-          align: 'start',
-        },
-      },
-    },
-    {
-      type: 'labels',
-      displayOrder: 2,
-      settings: {
-        sources: [{
-          component: 'bars',
-          selector: 'rect',
-          strategy: {
-            type: 'bar',
-            settings: {
-              direction: 'right',
-              labels: [{
-                label({ data }) {
-                  return data ? data.end.label : '';
-                },
-                placements: [
-                  { position: 'inside', justify: 1, fill: '#fff' },
-                  { position: 'outside', justify: 0, fill: '#666' },
-                ],
-              }],
-            },
-          },
-        }],
-      },
-    },
+    axis(),
+    axis({ scale: 'y' }),
+    box({ orientation: 'horizontal', fill: theme.primary, stroke: theme.primaryLight }),
+    range({ scale: 'y' }),
+    labels({ direction: 'right' }),
+    tooltip,
   ],
-  interactions: [
-    {
-      type: 'hammer',
-      gestures: [{
-        type: 'Pan',
-        options: {
-          event: 'range',
-          direction: Hammer.DIRECTION_VERTICAL,
-        },
-        events: {
-          rangestart(e) {
-            this.chart.component('rangeY').emit('rangeStart', e);
-          },
-          rangemove(e) {
-            this.chart.component('rangeY').emit('rangeMove', e);
-          },
-          rangeend(e) {
-            this.chart.component('rangeY').emit('rangeEnd', e);
-          },
-        },
-      }],
-    },
-    {
-      type: 'native',
-      events: {
-        mousemove(e) {
-          this.chart.component('tooltip').emit('hover', e);
-        },
-        mouseout(e) {
-          this.chart.component('tooltip').emit('leave', e);
-        },
-      },
-    },
-  ],
+  interactions: [itooltip, pan({ scale: 'y' })],
 };
+
+export default setting;

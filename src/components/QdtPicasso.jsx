@@ -5,13 +5,10 @@ import picasso from 'picasso.js';
 import picassoHammer from 'picasso-plugin-hammer';
 import picassoQ from 'picasso-plugin-q';
 import withHyperCube from './withHyperCube';
-import tooltip from '../picasso/components/tooltip';
-import domPointLabel from '../picasso/components/domPointLabel';
-import domPointImage from '../picasso/components/domPointImage';
+import { domPointLabel, domPointImage } from '../picasso/components';
 import preconfiguredSettings from '../picasso/settings';
 import '../styles/index.scss';
 
-picasso.component('tooltip', tooltip);
 picasso.component('domPointLabel', domPointLabel);
 picasso.component('domPointImage', domPointImage);
 picasso.use(picassoHammer);
@@ -31,12 +28,20 @@ class QdtPicassoComponent extends React.Component {
     innerHeight: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
     type: PropTypes.string,
     settings: PropTypes.object,
+    options: PropTypes.object,
     afterConfirmSelections: PropTypes.func,
+    prio: PropTypes.oneOf(['canvas', 'svg']),
   }
   static defaultProps = {
     type: null,
     settings: {},
+    options: {},
     afterConfirmSelections: null,
+    prio: 'canvas',
+  }
+  constructor(props) {
+    super(props);
+    this.mySettings = null;
   }
 
   componentDidMount() {
@@ -84,22 +89,30 @@ class QdtPicassoComponent extends React.Component {
   }
 
   @autobind
-  createPic() {
+  async createPic() {
     const {
-      qLayout, qData, settings, type,
+      qLayout, qData, settings, type, prio, options,
     } = this.props;
-    const mySettings = type ? preconfiguredSettings[type] : settings;
+    this.mySettings = type ? preconfiguredSettings[type] : settings;
     const data = { ...qLayout, qHyperCube: { ...qLayout.qHyperCube, qDataPages: [qData] } };
-    this.pic = picasso({ renderer: { prio: ['svg'] } }).chart({
+    if (type === 'verticalGauge' && options.min) {
+      this.mySettings.scales.y.min = options.min;
+      this.mySettings.components[1].start = options.min;
+      this.mySettings.components[2].start = options.min;
+    }
+    if (type === 'verticalGauge' && options.max) {
+      this.mySettings.scales.y.max = options.max;
+      this.mySettings.components[1].end = options.max;
+    }
+    this.pic = picasso({ renderer: { prio: [prio] } }).chart({
       element: this.element,
       data: [{
         type: 'q',
         key: 'qHyperCube',
         data: data.qHyperCube,
       }],
-      settings: mySettings,
+      settings: this.mySettings,
     });
-
     this.pic.brush('select').on('start', () => { this.props.beginSelections(); this.props.select(0, [], false); });
     this.pic.brush('select').on('update', (added, removed) => {
       if (!this.props.selections) return;
@@ -111,14 +124,26 @@ class QdtPicassoComponent extends React.Component {
   @autobind
   updatePic() {
     if (this.props.selections) return;
-    const { qLayout, qData } = this.props;
+    const {
+      qLayout, qData, type, options,
+    } = this.props;
     const data = { ...qLayout, qHyperCube: { ...qLayout.qHyperCube, qDataPages: [qData] } };
+    if (type === 'verticalGauge' && options.min) {
+      this.mySettings.scales.y.min = options.min;
+      this.mySettings.components[1].start = options.min;
+      this.mySettings.components[2].start = options.min;
+    }
+    if (type === 'verticalGauge' && options.max) {
+      this.mySettings.scales.y.max = options.max;
+      this.mySettings.components[1].end = options.max;
+    }
     this.pic.update({
       data: [{
         type: 'q',
         key: 'qHyperCube',
         data: data.qHyperCube,
       }],
+      settings: this.mySettings,
     });
   }
 
@@ -171,13 +196,15 @@ QdtPicasso.propTypes = {
   cols: PropTypes.array,
   qHyperCubeDef: PropTypes.object,
   qPage: PropTypes.object,
-  type: PropTypes.oneOf(['horizontalBarchart', 'verticalBarchart', 'piechart']),
+  type: PropTypes.oneOf(['comboLineBarchart', 'horizontalBarchart', 'lineChart', 'multiLineChart', 'pie', 'piechart', 'scatterplot', 'verticalBarchart', 'stackedBarchart', 'verticalGauge', 'verticalRangeGauge', 'rangeArea']),
   settings: PropTypes.object,
+  options: PropTypes.object,
   outerWidth: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   outerHeight: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   innerWidth: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   innerHeight: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   afterConfirmSelections: PropTypes.func,
+  prio: PropTypes.oneOf(['canvas', 'svg']),
 };
 QdtPicasso.defaultProps = {
   cols: null,
@@ -190,11 +217,13 @@ QdtPicasso.defaultProps = {
   },
   type: null,
   settings: {},
+  options: {},
   outerWidth: '100%',
   outerHeight: '100%',
   innerWidth: '100%',
   innerHeight: '100%',
   afterConfirmSelections: null,
+  prio: 'canvas',
 };
 
 export default QdtPicasso;

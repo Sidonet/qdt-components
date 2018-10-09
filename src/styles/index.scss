@@ -6,12 +6,23 @@
         url(../../node_modules/qdt-lui/dist/lui-icons.ttf) format('truetype');
   }
 
+/****************
+ * QdtFilter
+*****************/
+.lui-select { border-color: $gray-400 !important; }
+.qdt-filter-state-counts-bar {
+    position: relative;
+    height: 0.25rem;
+    background-color: $gray-300;
+    border-left: 1px solid $gray-300;
+    border-right: 1px solid $gray-300;
+}
 .O { // Optional
   color: $gray-900 !important;
 }
 .S { // Selected
   color: $gray-100 !important;
-  background-color: #52CC52 !important;
+  background-color: $color-green-qlik !important;
 }
 .A { // Alternative
   color: $gray-900 !important;
@@ -25,6 +36,8 @@
   color: $gray-100 !important;
   background-color: #A9A9A9 !important;
 }
+
+.lui-list .lui-list__item { cursor: pointer; }
 .lui-list .lui-list__item.S, 
 .lui-list .lui-list__item.A, 
 .lui-list .lui-list__item.X, 
@@ -53,6 +66,9 @@ th.active:after {
   border-right: 0.5rem solid transparent;
   border-top: 0.5rem solid #666;
 }
+.lui-select { border-radius: 0 !important; }
+.lui-tab.lui-active, .lui-tab:focus, .lui-tab.lui-focused { border-bottom: 2px solid $color-green-qlik; }
+// .lui-tab { display: inline-block; }
 
 /****************
  * QdtButton 
@@ -60,6 +76,21 @@ th.active:after {
 .qtd-button {
     display: inline-block;
     cursor: pointer;
+}
+
+/****************
+ * QdtTable 
+*****************/
+// We need to offset for the scoll bar width in the QdtBody
+.qtd-table-header {
+    width: 100%;
+    width: calc(100% - 18px);
+    width: -moz-calc(100% - 18px);
+    width: -webkit-calc(100% - 18px);
+}
+.qtd-table-body { 
+    width: 100%; 
+    tr:nth-child(even) { background: $gray-200 }
 }
 
 /**********************
@@ -205,6 +236,9 @@ th.active:after {
 /**********************
  * Preloader
 **********************/
+.qtd-preloader-bg { 
+    background-color: black; 
+}
 .qtd-preloader {    
     .qtd-preloader-ball1 {
         background-color: rgba(0,0,0,0);
@@ -308,5 +342,42 @@ th.active:after {
         &.lui-list__item {
             text-align: left;
         }
+    }
+}
+
+/**********************
+ * PICASSO
+**********************/
+.pic-tooltip-content { 
+    padding: 8px 15px !important;
+    .qdt-tooltip-header { 
+        .qdt-tooltip-header-box { 
+            position: relative;
+            display: inline-block;
+            width: 10px;
+            height: 12px;
+            left: -14px;
+            bottom: -2px;
+        }
+        .qdt-tooltip-header-title { 
+            display: inline-block;
+            position: relative;
+            left: -10px;
+        }
+        .qdt-tooltip-header-measure { 
+            display: inline-block;
+            text-align: right;
+        }
+    }
+    .text-right { text-align: right; }
+    .qdt-tooltip-row { 
+        display: block; 
+        .qdt-tooltip-col-label,
+        .qdt-tooltip-col-value { 
+            display: inline-block;
+            width: 50%;
+            padding-left: 5px;
+        }
+        .qdt-tooltip-col-value { text-align: right; }
     }
 }

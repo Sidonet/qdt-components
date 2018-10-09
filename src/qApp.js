@@ -1,6 +1,12 @@
-/* eslint-disable camelcase,prefer-arrow-callback,no-plusplus,comma-dangle */
+/* eslint-disable camelcase,prefer-arrow-callback,no-plusplus,comma-dangle,no-loop-func,no-undef */
+let capabilityApisPromise;
+
 const loadCapabilityApis = async (config) => {
   try {
+    if (capabilityApisPromise) {
+      await capabilityApisPromise;
+      return;
+    }
     const capabilityApisCSS = document.createElement('link');
     const prefix = (config.prefix !== '') ? `/${config.prefix}` : '';
     const ticket = (config.ticket !== '' && config.ticket !== undefined) ? `?qlikTicket=${config.ticket}` : '';
@@ -11,13 +17,19 @@ const loadCapabilityApis = async (config) => {
     capabilityApisCSS.loaded = new Promise((resolve) => {
       capabilityApisCSS.onload = () => { resolve(); };
     });
+
+    await Promise.all([capabilityApisCSS.loaded]);
+
     const capabilityApisJS = document.createElement('script');
     capabilityApisJS.src = `${(config.secure ? 'https://' : 'http://') + config.host + (config.port ? `:${config.port}` : '') + prefix}/resources/assets/external/requirejs/require.js`;
-    setTimeout(() => { document.head.appendChild(capabilityApisJS); }, 1000);
+    document.head.appendChild(capabilityApisJS);
     capabilityApisJS.loaded = new Promise((resolve) => {
       capabilityApisJS.onload = () => { resolve(); };
     });
-    await Promise.all([capabilityApisJS.loaded, capabilityApisCSS.loaded]);
+
+    capabilityApisPromise = Promise.all([capabilityApisJS.loaded, capabilityApisCSS.loaded]);
+
+    await capabilityApisPromise;
   } catch (error) {
     throw new Error(error);
   }
@@ -32,27 +44,51 @@ const qApp = async (config) => {
       paths: {
         qlik: `${(config.secure ? 'https://' : 'http://') + config.host + (config.port ? `:${config.port}` : '') + prefix}resources/js/qlik`,
       },
+      config: {
+        text: {
+          useXhr() {
+            return true;
+          },
+        },
+      },
     });
     return new Promise((resolve) => {
       window.require(['js/qlik'], (qlik) => {
         const app = qlik.openApp(config.appId, { ...config, isSecure: config.secure, prefix });
-        app.getList('SelectionObject', function (reply) {
-          let loc_selections = [];
-          let j;
+        for (let i = 0; i < config.fields.length; i++) {
+          console.log('field:', config.fields[i]);
+          app.createList({
+            qDef: {
+              qFieldDefs: [config.fields[i]], // set fieldname
+            },
+            qAutoSortByState: {
+              qDisplayNumberOfRows: 1,
+            },
+            qInitialDataFetch: [{
+              qHeight: 1000, // can set number of rows returned
+              qWidth: 1,
+            }],
+          }, (reply) => {
+            // console.log('reply:', reply.qListObject, 'app:', app.id);
+            let rows = [];
+            if (reply.qListObject.qDataPages.length > 0) {
+              console.log('reply:', JSON.stringify(reply.qListObject.qDataPages[0].qMatrix), 'app:', app.id);
+              rows = _.flatten(reply.qListObject.qDataPages[0].qMatrix);
+            }
+            const selected = rows.filter(row => row.qState === 'S');
+            const values = [];
+            for (let j = 0; j < selected.length; j++) {
+              values.push(selected[j].qText);
+            }
 
-          for (j = 0; j < reply.qSelectionObject.qSelections.length; j++) {
-            loc_selections.push({
-              field: reply.qSelectionObject.qSelections[j].qField,
-              selected: reply.qSelectionObject.qSelections[j].qSelected
-            });
-          }
-
-          if (localStorage.getItem('selectItemLocalStorage') !== JSON.stringify(loc_selections)) {
-            localStorage.setItem('selectItemLocalStorage', JSON.stringify(loc_selections));
-            localStorage.setItem('lastQlikAppId', app.id);
-          }
-          loc_selections = [];
-        });
+            // localStorage.setItem(reply.qListObject.qDimensionInfo.qFallbackTitle, JSON.stringify(values));
+            const fieldName = reply.qListObject.qDimensionInfo.qFallbackTitle;
+            if (localStorage.getItem(fieldName) !== JSON.stringify(values)) {
+              console.log('local storage =', localStorage.getItem(fieldName), 'values =', JSON.stringify(values));
+              localStorage.setItem(fieldName, JSON.stringify(values));
+            }
+          });
+        }
         resolve(app);
       });
     });
